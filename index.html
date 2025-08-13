@@ -1,1 +1,161 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>אנימציית מריונטה ב־p5.js</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; place-items: center; background: #0b0c10; }
+    #info { position: fixed; top: 10px; inset-inline: 10px; color: #cfd8dc; font-family: system-ui, Arial; font-size: 14px; opacity: .9; text-align: center; }
+    a { color: #90caf9; }
+  </style>
+  <!-- p5.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.3/lib/p5.min.js"></script>
+</head>
+<body>
+  <div id="info">לחצי/י עם העכבר כדי לעצור/להמשיך את האנימציה · גררי/י את הידיות העליונות · גלגלת לשינוי אורך החוטים</div>
+  <script>
+    // סקיצה: מריונטה מינימלית – ראש, גוף, ידיים ורגליים, עם חוטים ומוט שליטה
+    // מאת: לני ולומי ✨
+
+    let running = true;
+    let baseLen = 140; // אורך החוטים הבסיסי
+    let sway = 0;      // זווית נדנוד
+    let t = 0;         // זמן לאנימציה
+
+    // נקודות אחיזה למוט העליון (ניתן לגרור)
+    let handleL, handleR;
+    let dragging = null;
+
+    function setup() {
+      createCanvas(720, 480);
+      angleMode(DEGREES);
+      strokeJoin(ROUND);
+      handleL = createVector(width*0.4, height*0.15);
+      handleR = createVector(width*0.6, height*0.15);
+    }
+
+    function drawStage() {
+      // מוט שליטה
+      stroke(180);
+      strokeWeight(8);
+      line(handleL.x, handleL.y, handleR.x, handleR.y);
+      // ידיות
+      strokeWeight(1);
+      fill(230);
+      circle(handleL.x, handleL.y, 12);
+      circle(handleR.x, handleR.y, 12);
+    }
+
+    function drawPuppet() {
+      const center = p5.Vector.lerp(handleL, handleR, 0.5);
+      const len = baseLen;
+
+      // נדנוד עדין
+      const amp = 10; // משרעת
+      const speed = 0.6;
+      if (running) t += speed;
+      sway = sin(t) * amp;
+
+      // נקודת תלייה מרכזית
+      const top = createVector(center.x, center.y);
+
+      // ראש
+      const head = createVector(center.x + sway*0.5, center.y + len*0.35);
+
+      // גוף
+      const bodyTop = head.copy().add(0, 24);
+      const bodyBottom = bodyTop.copy().add(0, 70);
+
+      // ידיים
+      const armSpan = 60;
+      const leftHand = bodyTop.copy().add(-armSpan + sway*0.3, 30);
+      const rightHand = bodyTop.copy().add(armSpan + sway*0.3, 30);
+
+      // רגליים
+      const legSpread = 24;
+      const leftFoot = bodyBottom.copy().add(-legSpread + sway*0.2, 60);
+      const rightFoot = bodyBottom.copy().add(legSpread + sway*0.2, 60);
+
+      // ציור חוטים
+      stroke(180, 180, 200, 180);
+      strokeWeight(2);
+      line(top.x, top.y, head.x, head.y - 16); // חוט לראש
+      line(handleL.x, handleL.y, leftHand.x, leftHand.y - 8); // חוט ליד שמאל
+      line(handleR.x, handleR.y, rightHand.x, rightHand.y - 8); // חוט ליד ימין
+
+      // גוף
+      noFill();
+      stroke(230);
+      strokeWeight(3);
+      // צוואר
+      line(head.x, head.y - 8, bodyTop.x, bodyTop.y);
+      // עמוד שדרה
+      line(bodyTop.x, bodyTop.y, bodyBottom.x, bodyBottom.y);
+      // ידיים
+      line(bodyTop.x, bodyTop.y + 10, leftHand.x, leftHand.y);
+      line(bodyTop.x, bodyTop.y + 10, rightHand.x, rightHand.y);
+      // רגליים
+      line(bodyBottom.x, bodyBottom.y, leftFoot.x, leftFoot.y);
+      line(bodyBottom.x, bodyBottom.y, rightFoot.x, rightFoot.y);
+
+      // ראש (עיגול)
+      fill(255);
+      stroke(255);
+      circle(head.x, head.y, 32);
+
+      // עיניים קטנות
+      stroke(30);
+      fill(30);
+      circle(head.x - 5, head.y - 2, 3);
+      circle(head.x + 5, head.y - 2, 3);
+
+      // צל עדין
+      noStroke();
+      fill(255, 255, 255, 8);
+      ellipse(bodyBottom.x, height - 18, 120, 14);
+    }
+
+    function draw() {
+      background(14, 16, 22);
+      drawStage();
+      drawPuppet();
+
+      // כותרת קטנה
+      noStroke();
+      fill(200);
+      textAlign(CENTER, CENTER);
+      textSize(14);
+      text('מריונטה קטנה ב־p5.js', width/2, height - 30);
+    }
+
+    function mousePressed() {
+      // עצירה/הפעלה אם לוחצים על הרקע
+      if (!overHandle(mouseX, mouseY, handleL) && !overHandle(mouseX, mouseY, handleR)) {
+        running = !running;
+        return;
+      }
+      // התחלת גרירה
+      if (overHandle(mouseX, mouseY, handleL)) dragging = 'L';
+      if (overHandle(mouseX, mouseY, handleR)) dragging = 'R';
+    }
+
+    function mouseDragged() {
+      if (dragging === 'L') { handleL.x = mouseX; handleL.y = mouseY; }
+      if (dragging === 'R') { handleR.x = mouseX; handleR.y = mouseY; }
+    }
+
+    function mouseReleased() { dragging = null; }
+
+    function mouseWheel(e) {
+      baseLen = constrain(baseLen + e.delta * 0.1, 60, 260);
+    }
+
+    function overHandle(mx, my, h) {
+      return dist(mx, my, h.x, h.y) < 12;
+    }
+  </script>
+</body>
+</html>
 
